@@ -1,15 +1,24 @@
 import discord
 import os
+from discord.ext import commands
+from discord import app_commands
 from notion_client import Client as NotionClient
 from datetime import datetime, timedelta, timezone
 from dateutil import parser
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# 台灣時區
-tz = timezone(timedelta(hours=8))
+# ====== 設定區 ======
+NOTION_TOKEN = os.environ["NOTION_TOKEN"]
+DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
+MEETING_DB_ID = "cd784a100f784e15b401155bc3313a1f"
+USERID_DB_ID = "21bd8d0b09f180908e1df38429153325"
+GUILD_ID = discord.Object(id=int(os.environ.get("GUILD_ID")))  # 你的 Discord Server ID
 
-# 啟動假 HTTP server（為了 Render Web Service 檢查用）
+tz = timezone(timedelta(hours=8))
+notion = NotionClient(auth=NOTION_TOKEN)
+
+# ====== HTTP 假伺服器（Render 需要開 Port）======
 class DummyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -24,16 +33,17 @@ def run_dummy_server():
 
 threading.Thread(target=run_dummy_server).start()
 
-# Token 與資料庫設定
-TOKEN = os.environ["DISCORD_TOKEN"]
-NOTION_TOKEN = os.environ["NOTION_TOKEN"]
-MEETING_DB_ID = "cd784a100f784e15b401155bc3313a1f"
-USERID_DB_ID = "21bd8d0b09f180908e1df38429153325"
+# ====== Slash Command Bot 建立 ======
+intents = discord.Intents.default()
+client = commands.Bot(command_prefix="!", intents=intents)
 
-notion = NotionClient(auth=NOTION_TOKEN)
+@client.event
+async def on_ready():
+    print(f"✅ Bot 已上線：{client.user}")
+    await client.tree.sync(guild=GUILD_ID)
 
+# ====== Notion 查詢邏輯 ======
 def get_today_meetings_for_user(staff_id):
-    """取得該員編在今天（台灣時間）的所有會議資訊"""
     now = datetime.now(tz)
     today_str = now.date().isoformat()
     today_display = now.strftime("%Y/%m/%d")
@@ -103,59 +113,37 @@ def get_today_meetings_for_user(staff_id):
 
     return "\n".join(lines).strip()
 
-# 建立 Discord Bot
-intents = discord.Intents.default()
-intents.message_content = True
-client = discord.Client(intents=intents)
+# ====== Slash 指令 /會議 ======
+@client.tree.command(name="會議", description="查詢今天你參加的 Notion 會議")
+@app_commands.guilds(GUILD_ID)
+async def meeting_command(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
 
-@client.event
-async def on_ready():
-    print(f"✅ Bot 上線為 {client.user}")
+    discord_user_id = interaction.user.id
 
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return
-
-    content = message.content.lower()
-    discord_user_id = int(message.author.id)
-
-    user_response = notion.databases.query(
-        database_id=USERID_DB_ID,
-        filter={
-            "property": "DC ID",
-            "number": {
-                "equals": discord_user_id
+    try:
+        user_response = notion.databases.query(
+            database_id=USERID_DB_ID,
+            filter={
+                "property": "DC ID",
+                "number": {
+                    "equals": discord_user_id
+                }
             }
-        }
-    )
+        )
 
-    if not user_response["results"]:
-        await message.channel.send("🙈 找不到你的員編喔，請先完成使用者綁定")
-        return
-
-    if content == "ping":
-        await message.channel.send("pong！")
-
-    elif content == "/會議":
-        channel = message.channel
-        if channel != "1387988298668048434":
+        if not user_response["results"]:
+            await interaction.followup.send("🙈 找不到你的員編喔，請先完成使用者綁定")
             return
-        
-        await message.channel.send("📡 正在查詢今天的會議...")      
-        
-        try:
-            user_entry = user_response["results"][0]
-            employee_id = user_entry["properties"]["Name"]["title"][0]["text"]["content"]
 
-            if not employee_id:
-                await message.channel.send("🙅 找不到你的員編名稱")
-                return
+        user_entry = user_response["results"][0]
+        employee_id = user_entry["properties"]["Name"]["title"][0]["text"]["content"]
 
-            reply_text = get_today_meetings_for_user(employee_id)
-            await message.channel.send(reply_text)
+        reply_text = get_today_meetings_for_user(employee_id)
+        await interaction.followup.send(reply_text)
 
-        except Exception as e:
-            await message.channel.send(f"❗ 發生錯誤：{e}")
+    except Exception as e:
+        await interaction.followup.send(f"❗ 發生錯誤：{e}")
 
-client.run(TOKEN)
+# ====== 執行 Bot ======
+client.run(DISCORD_TOKEN)
