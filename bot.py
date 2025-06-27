@@ -81,10 +81,7 @@ async def send_daily_reminder():
     hour = now.hour
     channel = client.get_channel(1388040404385136791)
     if channel:
-        if hour < 12:
-            await channel.send("⏰ 記得上班打卡唷！！")
-        else:
-            await channel.send("🕔 下班前記得打卡！")
+        await channel.send("⏰ 記得上班打卡唷！！")
         
 
 # ====== Debug Modal 定義 ======
