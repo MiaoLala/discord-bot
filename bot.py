@@ -9,6 +9,8 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.date import DateTrigger  # 這行要加上
+
 
 # ====== 設定區 ======
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
@@ -66,7 +68,7 @@ async def on_ready():
 
     # ✅ 指定一次性排程：2025/06/27 14:32 台灣時間
     scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
-    trigger_time = datetime(2025, 6, 27, 14, 32, tzinfo=tz)  # 台灣時間
+    trigger_time = datetime(2025, 6, 27, 14, 35, tzinfo=tz)  # 台灣時間
     scheduler.add_job(send_monthly_reminder, DateTrigger(run_date=trigger_time))
     scheduler.start()
 
