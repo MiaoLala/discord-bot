@@ -1,5 +1,6 @@
 import discord
 import os
+import calendar
 from discord.ext import commands
 from discord import app_commands
 from notion_client import Client as NotionClient
@@ -52,12 +53,23 @@ threading.Thread(target=run_dummy_server).start()
 
 
 # ====== 每月提醒邏輯 ======
+def is_last_working_day(date: datetime.date) -> bool:
+    # 找出該月最後一天
+    last_day = calendar.monthrange(date.year, date.month)[1]
+    last_date = datetime(date.year, date.month, last_day).date()
+
+    # 從最後一天往前找，直到不是週六日
+    while last_date.weekday() >= 5:  # 5: Saturday, 6: Sunday
+        last_date -= timedelta(days=1)
+
+    return date == last_date
+
 def is_last_friday(date):
     return date.weekday() == 4 and (date + timedelta(weeks=1)).month != date.month
-
+    
 async def send_monthly_reminder():
     now = datetime.now(tz)
-    if is_last_friday(now.date()):
+    if is_last_working_day(now.date()):
         channel = client.get_channel(REPORT_CHANNEL_ID)
         if channel:
             await channel.send("📌 記得寫5號報告唷~")
@@ -95,15 +107,26 @@ class DebugRequestModal(discord.ui.Modal, title="🛠️ Debug 查詢申請"):
             )
 
 
-# ====== /debug申請 ======
-@client.tree.command(name="debug申請", description="開啟 Debug 查詢表單")
+# 按鈕互動
+class DebugButtonView(discord.ui.View):
+    @discord.ui.button(label="開啟 Debug 申請表單", style=discord.ButtonStyle.primary)
+    async def open_debug_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(DebugRequestModal())
+
+# Slash 指令，送出按鈕訊息
+@client.tree.command(name="debug申請", description="開啟 Debug 查詢申請按鈕")
 @app_commands.guilds(GUILD_ID)
-async def debug_request(interaction: discord.Interaction):
-    if interaction.channel_id != DEBUG_ALLOWED_CHANNEL_ID:
+async def debug_command(interaction: discord.Interaction):
+    ALLOWED_CHANNEL_ID = 1388000532572012685  # 你指定的頻道 ID
+    if interaction.channel_id != ALLOWED_CHANNEL_ID:
         await interaction.response.send_message("❗此指令只能在指定頻道中使用唷", ephemeral=True)
         return
-    await interaction.response.send_modal(DebugRequestModal())
 
+    await interaction.response.send_message(
+        "請點下面按鈕開啟 Debug 申請表單",
+        view=DebugButtonView(),
+        ephemeral=True  # 只有自己看得到
+    )
 
 # ====== /會議 查詢 ======
 @client.tree.command(name="會議", description="查詢今天你參加的 Notion 會議")
