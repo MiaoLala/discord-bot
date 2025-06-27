@@ -31,6 +31,7 @@ REPORT_CHANNEL_ID = 1387409782553710663 # 公告
 MEETING_ALLOWED_CHANNEL_ID = 1387988298668048434 # 會議通知
 DEBUG_ALLOWED_CHANNEL_ID = 1388000532572012685 # debug申請
 TARGET_CHANNEL_ID = 1388083307476156466 # 提醒
+SENDMAIL_CHANNEL_ID = 1388000512875696128 # 作業需求
 TEST_CHANNEL_ID = 1388040404385136791 # 測試
 
 # ====== HTTP 假伺服器（Render Ping 用）======
@@ -86,7 +87,57 @@ async def send_daily_reminder():
             await channel.send("⏰ 記得上班打卡唷！！")
         else:
             await channel.send("🕔 下班前記得打卡！")
-        
+
+# ====== 作業需求 ======
+# ====== SendMail Modal 定義 ======
+class SendMailRequestModal(discord.ui.Modal, title="📧 寄信申請"):
+    content = discord.ui.TextInput(
+        label="請填寫以下內容",
+        style=discord.TextStyle.paragraph,
+        default=(
+            "XX，請幫我寄信 謝謝！\n"
+            "資料庫：\n"
+            "執行時間："
+        ),
+        required=True,
+        max_length=1000
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # 本人看到確認訊息
+        await interaction.response.send_message(
+            "✅ 已收到你的寄信申請內容，我們會儘快處理！", ephemeral=True
+        )
+
+        # 公開發送申請內容
+        channel = interaction.client.get_channel(SENDMAIL_CHANNEL_ID)  # 或可改用你指定的寄信頻道 ID
+        if channel:
+            await channel.send(
+                f"📨 <@{interaction.user.id}> 提交了一筆寄信申請：\n```{self.content.value}```"
+            )
+
+
+# 按鈕互動 View
+class SendMailButtonView(discord.ui.View):
+    @discord.ui.button(label="開啟寄信申請表單", style=discord.ButtonStyle.primary)
+    async def open_sendmail_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(SendMailRequestModal())
+
+
+# Slash 指令 /寄信申請
+@client.tree.command(name="寄信申請", description="開啟寄信申請按鈕")
+@app_commands.guilds(GUILD_ID)
+async def sendmail_command(interaction: discord.Interaction):
+    if interaction.channel_id != DEBUG_ALLOWED_CHANNEL_ID:
+        await interaction.response.send_message("❗此指令只能在指定頻道中使用喔～", ephemeral=True)
+        return
+
+    await interaction.response.send_message(
+        "請點下面按鈕開啟寄信申請表單",
+        view=SendMailButtonView(),
+        ephemeral=True
+    )
+
 
 # ====== Debug Modal 定義 ======
 # Modal 視窗
