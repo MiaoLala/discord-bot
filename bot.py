@@ -128,7 +128,7 @@ class SendMailButtonView(discord.ui.View):
 @client.tree.command(name="寄信申請", description="開啟寄信申請按鈕")
 @app_commands.guilds(GUILD_ID)
 async def sendmail_command(interaction: discord.Interaction):
-    if interaction.channel_id != DEBUG_ALLOWED_CHANNEL_ID:
+    if interaction.channel_id != SENDMAIL_CHANNEL_ID:
         await interaction.response.send_message("❗此指令只能在指定頻道中使用喔～", ephemeral=True)
         return
 
@@ -181,7 +181,7 @@ class DebugButtonView(discord.ui.View):
 @client.tree.command(name="debug申請", description="開啟 Debug 授權申請按鈕")
 @app_commands.guilds(GUILD_ID)
 async def debug_command(interaction: discord.Interaction):
-    ALLOWED_CHANNEL_ID = 1388000532572012685  # 你指定的頻道 ID
+    ALLOWED_CHANNEL_ID = DEBUG_ALLOWED_CHANNEL_ID  # 你指定的頻道 ID
     if interaction.channel_id != ALLOWED_CHANNEL_ID:
         await interaction.response.send_message("❗此指令只能在指定頻道中使用喔～", ephemeral=True)
         return
