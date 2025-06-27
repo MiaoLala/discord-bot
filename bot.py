@@ -56,6 +56,41 @@ async def send_monthly_reminder():
         if channel:
             await channel.send("📌 記得寫5號報告唷~")
 
+# debug查詢
+# 指定頻道 ID（限制只能該頻道使用）
+ALLOWED_CHANNEL_ID = 1388000532572012685
+
+# Modal 視窗
+class DebugRequestModal(discord.ui.Modal, title="🛠️ Debug 查詢申請"):
+    content = discord.ui.TextInput(
+        label="請填寫以下內容",
+        style=discord.TextStyle.paragraph,
+        default=(
+            "請幫我開Debug\n"
+            "類別：查詢或修改\n"
+            "作業項目：\n"
+            "k1：\n"
+            "k2：\n"
+            "k3："
+        ),
+        required=True,
+        max_length=1000
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message(
+            f"✅ 已收到你的申請內容：\n\n```{self.content.value}```",
+            ephemeral=True
+        )
+
+# Slash 指令：/debug申請
+@bot.tree.command(name="debug申請", description="開啟 Debug 查詢申請表單")
+async def debug_request(interaction: discord.Interaction):
+    if interaction.channel_id != ALLOWED_CHANNEL_ID:
+        await interaction.response.send_message("❗此指令只能在指定頻道中使用唷", ephemeral=True)
+        return
+
+    await interaction.response.send_modal(DebugRequestModal())
 
 # ====== Slash Command Bot 建立 ======
 intents = discord.Intents.default()
