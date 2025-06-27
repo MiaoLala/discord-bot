@@ -93,9 +93,9 @@ async def send_daily_reminder():
 class PersonSelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="小明", value="小明"),
-            discord.SelectOption(label="小美", value="小美"),
-            discord.SelectOption(label="小王", value="小王"),
+            discord.SelectOption(label="依廷", value="依廷"),
+            discord.SelectOption(label="豐全", value="豐全"),
+            discord.SelectOption(label="湘鈴", value="湘鈴"),
         ]
         super().__init__(
             placeholder="請選擇要寄信的人",
