@@ -28,9 +28,10 @@ notion = NotionClient(auth=NOTION_TOKEN)
 
 # 預設頻道設定
 REPORT_CHANNEL_ID = 1387409782553710663 # 公告
-MEETING_ALLOWED_CHANNEL_ID = 1387988298668048434
-DEBUG_ALLOWED_CHANNEL_ID = 1388000532572012685
+MEETING_ALLOWED_CHANNEL_ID = 1387988298668048434 # 會議通知
+DEBUG_ALLOWED_CHANNEL_ID = 1388000532572012685 # debug申請
 TARGET_CHANNEL_ID = 1388083307476156466 # 提醒
+TEST_CHANNEL_ID = 1388040404385136791 # 測試
 
 # ====== HTTP 假伺服器（Render Ping 用）======
 class DummyHandler(BaseHTTPRequestHandler):
@@ -75,13 +76,16 @@ async def send_monthly_reminder():
             await channel.send("📌 記得寫5號報告唷~")
 
 
-# 打卡提醒訊息
+# 打卡提醒訊息More actions
 async def send_daily_reminder():
     now = datetime.now(tz)
     hour = now.hour
-    channel = client.get_channel(1388040404385136791)
+    channel = client.get_channel(TEST_CHANNEL_ID)
     if channel:
-        await channel.send("⏰ 記得上班打卡唷！！")
+        if hour < 12:
+            await channel.send("⏰ 記得上班打卡唷！！")
+        else:
+            await channel.send("🕔 下班前記得打卡！")
         
 
 # ====== Debug Modal 定義 ======
@@ -112,7 +116,7 @@ class DebugRequestModal(discord.ui.Modal, title="🛠️ Debug 查詢申請"):
         channel = interaction.client.get_channel(DEBUG_ALLOWED_CHANNEL_ID)
         if channel:
             await channel.send(
-                f"📨 <@{interaction.user.id}> 提交了一筆 Debug 查詢申請：\n```{self.content.value}```"
+                f"📨 <@{interaction.user.id}> 提交了一筆 Debug 授權申請：\n```{self.content.value}```"
             )
 
 
@@ -123,12 +127,12 @@ class DebugButtonView(discord.ui.View):
         await interaction.response.send_modal(DebugRequestModal())
 
 # Slash 指令，送出按鈕訊息
-@client.tree.command(name="debug申請", description="開啟 Debug 查詢申請按鈕")
+@client.tree.command(name="debug申請", description="開啟 Debug 授權申請按鈕")
 @app_commands.guilds(GUILD_ID)
 async def debug_command(interaction: discord.Interaction):
     ALLOWED_CHANNEL_ID = 1388000532572012685  # 你指定的頻道 ID
     if interaction.channel_id != ALLOWED_CHANNEL_ID:
-        await interaction.response.send_message("❗此指令只能在指定頻道中使用唷", ephemeral=True)
+        await interaction.response.send_message("❗此指令只能在指定頻道中使用喔～", ephemeral=True)
         return
 
     await interaction.response.send_message(
@@ -221,11 +225,6 @@ def get_today_meetings_for_user(staff_id):
 
     return "\n".join(lines).strip()
 
-async def test_job():
-    channel = client.get_channel(1388040404385136791)
-    if channel:
-        await channel.send(f"❗ ")
-
 # ====== Bot 啟動與排程設定 ======
 @client.event
 async def on_ready():
@@ -233,10 +232,9 @@ async def on_ready():
     await client.tree.sync(guild=GUILD_ID)
 
     scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
-    scheduler.add_job(send_monthly_reminder, CronTrigger(day_of_week="fri", hour=9, minute=0))
-    scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=8, minute=25))
-    scheduler.add_job(send_daily_reminder, CronTrigger(hour=20, minute=45, timezone="Asia/Taipei"))
-    # scheduler.add_job(test_job, CronTrigger(second=0))
+    scheduler.add_job(send_monthly_reminder, CronTrigger(day_of_week="fri", hour=9, minute=0, timezone="Asia/Taipei"), misfire_grace_time=300)
+    scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=8, minute=25, timezone="Asia/Taipei"), misfire_grace_time=300)
+    scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=22, minute=20, timezone="Asia/Taipei"), misfire_grace_time=300)
     scheduler.start()
 
 
