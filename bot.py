@@ -19,6 +19,11 @@ MEETING_DB_ID = "cd784a100f784e15b401155bc3313a1f"
 USERID_DB_ID = "21bd8d0b09f180908e1df38429153325"
 GUILD_ID = discord.Object(id=int(os.environ.get("GUILD_ID")))  # 你的 Discord Server ID
 
+
+# ====== Slash Command Bot 建立 ======
+intents = discord.Intents.default()
+client = commands.Bot(command_prefix="!", intents=intents)
+
 tz = timezone(timedelta(hours=8))
 notion = NotionClient(auth=NOTION_TOKEN)
 
@@ -91,10 +96,6 @@ async def debug_request(interaction: discord.Interaction):
         return
 
     await interaction.response.send_modal(DebugRequestModal())
-
-# ====== Slash Command Bot 建立 ======
-intents = discord.Intents.default()
-client = commands.Bot(command_prefix="!", intents=intents)
 
 @client.event
 async def on_ready():
