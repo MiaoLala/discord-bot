@@ -68,8 +68,8 @@ async def on_ready():
 
     # ✅ 指定一次性排程：2025/06/27 14:32 台灣時間
     scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
-    trigger_time = datetime(2025, 6, 27, 14, 45, tzinfo=tz)  # 台灣時間
-    scheduler.add_job(send_monthly_reminder, DateTrigger(run_date=trigger_time))
+    # 每週五早上 9:00 執行（函式內部再判斷是不是「最後一個週五」）
+    scheduler.add_job(send_monthly_reminder, CronTrigger(day_of_week="fri", hour=9, minute=0))
     scheduler.start()
 
 # ====== Notion 查詢邏輯 ======
