@@ -90,51 +90,77 @@ async def send_daily_reminder():
 
 # ====== 作業需求 ======
 # ====== SendMail Modal 定義 ======
-class SendMailRequestModal(discord.ui.Modal, title="📧 寄信申請"):
-    content = discord.ui.TextInput(
-        label="請填寫以下內容",
-        style=discord.TextStyle.paragraph,
-        default=(
-            "XX，請幫我寄信 謝謝！\n"
-            "資料庫：\n"
-            "執行時間："
-        ),
-        required=True,
-        max_length=1000
-    )
-
-    async def on_submit(self, interaction: discord.Interaction):
-        # 本人看到確認訊息
-        await interaction.response.send_message(
-            "✅ 已收到你的寄信申請內容，我們會儘快處理！", ephemeral=True
+class PersonSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="小明", value="小明"),
+            discord.SelectOption(label="小美", value="小美"),
+            discord.SelectOption(label="小王", value="小王"),
+        ]
+        super().__init__(
+            placeholder="請選擇要寄信的人",
+            min_values=1,
+            max_values=1,
+            options=options,
         )
 
-        # 公開發送申請內容
-        channel = interaction.client.get_channel(SENDMAIL_CHANNEL_ID)  # 或可改用你指定的寄信頻道 ID
+    async def callback(self, interaction: discord.Interaction):
+        selected_name = self.values[0]
+        await interaction.response.send_message(
+            "請點下面按鈕開啟寄信申請表單",
+            view=SendMailWithNameView(selected_name),
+            ephemeral=True
+        )
+
+
+class PersonSelectView(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.add_item(PersonSelect())
+
+
+class SendMailRequestModal(discord.ui.Modal):
+    def __init__(self, selected_name: str):
+        super().__init__(title="📧 寄信申請")
+        self.selected_name = selected_name
+
+        self.content = discord.ui.TextInput(
+            label="請填寫以下內容",
+            style=discord.TextStyle.paragraph,
+            default=(
+                f"{selected_name}，請幫我寄信 謝謝！\n"
+                "資料庫：\n"
+                "執行時間："
+            ),
+            required=True,
+            max_length=1000
+        )
+        self.add_item(self.content)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message("✅ 已收到你的寄信申請內容！", ephemeral=True)
+        channel = interaction.client.get_channel(SENDMAIL_CHANNEL_ID)
         if channel:
-            await channel.send(
-                f"📨 <@{interaction.user.id}> 提交了一筆寄信申請：\n```{self.content.value}```"
-            )
+            await channel.send(f"📨 <@{interaction.user.id}> 提交了一筆寄信申請：\n```{self.content.value}```")
 
 
-# 按鈕互動 View
-class SendMailButtonView(discord.ui.View):
+class SendMailWithNameView(discord.ui.View):
+    def __init__(self, selected_name: str):
+        super().__init__()
+        self.selected_name = selected_name
+
     @discord.ui.button(label="開啟寄信申請表單", style=discord.ButtonStyle.primary)
-    async def open_sendmail_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(SendMailRequestModal())
+    async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(SendMailRequestModal(self.selected_name))
 
 
-# Slash 指令 /寄信申請
-@client.tree.command(name="寄信申請", description="開啟寄信申請按鈕")
+# /寄信申請 指令：開啟選人選單
+@client.tree.command(name="寄信申請", description="寄信申請（選擇對象）")
 @app_commands.guilds(GUILD_ID)
-async def sendmail_command(interaction: discord.Interaction):
-    if interaction.channel_id != SENDMAIL_CHANNEL_ID:
-        await interaction.response.send_message("❗此指令只能在指定頻道中使用喔～", ephemeral=True)
-        return
-
+async def send_mail_select(interaction: discord.Interaction):
     await interaction.response.send_message(
-        "請點下面按鈕開啟寄信申請表單",
-        view=SendMailButtonView(),
+        "請選擇收件對象 👇",
+        view=PersonSelectView(),
         ephemeral=True
     )
 
