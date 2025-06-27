@@ -109,11 +109,11 @@ async def debug_request(interaction: discord.Interaction):
 @client.tree.command(name="會議", description="查詢今天你參加的 Notion 會議")
 @app_commands.guilds(GUILD_ID)
 async def meeting_command(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
     if interaction.channel_id != MEETING_ALLOWED_CHANNEL_ID:
         await interaction.response.send_message("❗此指令只能在指定頻道中使用喔～", ephemeral=True)
         return
 
-    await interaction.response.defer(thinking=True)
     discord_user_id = interaction.user.id
 
     try:
