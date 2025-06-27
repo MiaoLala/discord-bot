@@ -2,8 +2,12 @@ import discord
 import os
 from notion_client import Client as NotionClient
 from datetime import datetime, timedelta, timezone
+from dateutil import parser
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
+# 台灣時區
+tz = timezone(timedelta(hours=8))
 
 # 啟動假 HTTP server（為了 Render Web Service 檢查用）
 class DummyHandler(BaseHTTPRequestHandler):
@@ -26,13 +30,14 @@ NOTION_TOKEN = os.environ["NOTION_TOKEN"]
 MEETING_DB_ID = "cd784a100f784e15b401155bc3313a1f"
 USERID_DB_ID = "21bd8d0b09f180908e1df38429153325"
 
+notion = NotionClient(auth=NOTION_TOKEN)
+
 def get_today_meetings_for_user(staff_id):
     """取得該員編在今天（台灣時間）的所有會議資訊"""
     now = datetime.now(tz)
     today_str = now.date().isoformat()
     today_display = now.strftime("%Y/%m/%d")
 
-    # Notion 過濾條件：只取今天的會議
     filter_conditions = {
         "and": [
             {
@@ -62,28 +67,26 @@ def get_today_meetings_for_user(staff_id):
         props = page["properties"]
         persons = props.get("相關人員", {}).get("people", [])
 
-        # 確認是否是該員編參與的會議
         if not any(staff_id in p.get("name", "") for p in persons):
             continue
 
-        title = props["Name"]["title"][0]["text"]["content"] if props["Name"]["title"] else "未命名會議"
+        title = props.get("Name", {}).get("title", [])
+        title_text = title[0]["text"]["content"] if title else "未命名會議"
+
         datetime_str = props["日期"]["date"]["start"]
         dt_obj = parser.isoparse(datetime_str).astimezone(tz)
-
-        # 確認會議日期是否為今天
         if dt_obj.date() != now.date():
             continue
 
         date_time = dt_obj.strftime("%Y/%m/%d %H:%M")
 
-        # 地點處理
         location = "未填寫"
         location_prop = props.get("地點")
         if location_prop and location_prop.get("select"):
-            location = location_prop["select"]["name"]
+            location = location_prop["select"].get("name", "未填寫")
 
         meetings_for_user.append({
-            "title": title,
+            "title": title_text,
             "datetime": date_time,
             "location": location
         })
@@ -91,7 +94,6 @@ def get_today_meetings_for_user(staff_id):
     if not meetings_for_user:
         return f"{today_display} 今天沒有會議喔！"
 
-    # 格式化回覆訊息
     lines = [f"{today_display} 會議提醒"]
     for idx, m in enumerate(meetings_for_user, start=1):
         lines.append(f"{idx}. {m['title']}")
@@ -101,11 +103,10 @@ def get_today_meetings_for_user(staff_id):
 
     return "\n".join(lines).strip()
 
-
+# 建立 Discord Bot
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
-notion = NotionClient(auth=NOTION_TOKEN)
 
 @client.event
 async def on_ready():
@@ -117,9 +118,8 @@ async def on_message(message):
         return
 
     content = message.content.lower()
-    discord_user_id = int(message.author.id)  # 若 Notion DC ID 是 number
+    discord_user_id = int(message.author.id)
 
-    # 查詢 User ID 資料庫
     user_response = notion.databases.query(
         database_id=USERID_DB_ID,
         filter={
@@ -144,12 +144,12 @@ async def on_message(message):
             user_entry = user_response["results"][0]
             employee_id = user_entry["properties"]["Name"]["title"][0]["text"]["content"]
 
-            # 組合回覆
             if not employee_id:
-                await message.channel.send("沒有你相關的會議唷")
-            return
+                await message.channel.send("🙅 找不到你的員編名稱")
+                return
 
-        reply_text = get_today_meetings_for_user(employee_id)
+            reply_text = get_today_meetings_for_user(employee_id)
+            await message.channel.send(reply_text)
 
         except Exception as e:
             await message.channel.send(f"❗ 發生錯誤：{e}")
