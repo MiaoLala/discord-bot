@@ -20,19 +20,87 @@ def run_dummy_server():
 
 threading.Thread(target=run_dummy_server).start()
 
-# 台灣時區
-tz_taiwan = timezone(timedelta(hours=8))
-now = datetime.now(tz_taiwan)
-today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-today_end = today_start + timedelta(days=1)
-start_str = today_start.isoformat()
-end_str = today_end.isoformat()
-
 # Token 與資料庫設定
 TOKEN = os.environ["DISCORD_TOKEN"]
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
 MEETING_DB_ID = "cd784a100f784e15b401155bc3313a1f"
 USERID_DB_ID = "21bd8d0b09f180908e1df38429153325"
+
+def get_today_meetings_for_user(staff_id):
+    """取得該員編在今天（台灣時間）的所有會議資訊"""
+    now = datetime.now(tz)
+    today_str = now.date().isoformat()
+    today_display = now.strftime("%Y/%m/%d")
+
+    # Notion 過濾條件：只取今天的會議
+    filter_conditions = {
+        "and": [
+            {
+                "property": "日期",
+                "date": {
+                    "on_or_after": today_str,
+                    "on_or_before": today_str
+                }
+            },
+            {
+                "property": "類別",
+                "select": {
+                    "equals": "會議"
+                }
+            }
+        ]
+    }
+
+    meeting_pages = notion.databases.query(
+        database_id=MEETING_DB_ID,
+        filter=filter_conditions
+    ).get("results", [])
+
+    meetings_for_user = []
+
+    for page in meeting_pages:
+        props = page["properties"]
+        persons = props.get("相關人員", {}).get("people", [])
+
+        # 確認是否是該員編參與的會議
+        if not any(staff_id in p.get("name", "") for p in persons):
+            continue
+
+        title = props["Name"]["title"][0]["text"]["content"] if props["Name"]["title"] else "未命名會議"
+        datetime_str = props["日期"]["date"]["start"]
+        dt_obj = parser.isoparse(datetime_str).astimezone(tz)
+
+        # 確認會議日期是否為今天
+        if dt_obj.date() != now.date():
+            continue
+
+        date_time = dt_obj.strftime("%Y/%m/%d %H:%M")
+
+        # 地點處理
+        location = "未填寫"
+        location_prop = props.get("地點")
+        if location_prop and location_prop.get("select"):
+            location = location_prop["select"]["name"]
+
+        meetings_for_user.append({
+            "title": title,
+            "datetime": date_time,
+            "location": location
+        })
+
+    if not meetings_for_user:
+        return f"{today_display} 今天沒有會議喔！"
+
+    # 格式化回覆訊息
+    lines = [f"{today_display} 會議提醒"]
+    for idx, m in enumerate(meetings_for_user, start=1):
+        lines.append(f"{idx}. {m['title']}")
+        lines.append(f"－ 時間：{m['datetime']}")
+        lines.append(f"－ 地點：{m['location']}")
+        lines.append("")
+
+    return "\n".join(lines).strip()
+
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -76,52 +144,12 @@ async def on_message(message):
             user_entry = user_response["results"][0]
             employee_id = user_entry["properties"]["Name"]["title"][0]["text"]["content"]
 
-            meeting_response = notion.databases.query(
-                database_id=MEETING_DB_ID,
-                filter={
-                    "property": "日期",
-                    "date": {
-                        "on_or_after": start_str
-                    }
-                },
-                sorts=[
-                    {
-                        "property": "日期",
-                        "direction": "ascending"
-                    }
-                ]
-            )
-
-            related_meetings = []
-            for i, page in enumerate(meeting_response["results"], start=1):
-                props = page["properties"]
-                people = props["相關人員"]["people"]
-
-                # 比對是否相關
-                if not any(employee_id in p["name"] for p in people):
-                    continue
-
-                # 安全取得欄位
-                title = props["Name"]["title"][0]["text"]["content"] if props["Name"]["title"] else "(無標題)"
-                datetime_str = props["日期"]["date"]["start"]
-                dt = datetime.fromisoformat(datetime_str)
-                date_str = dt.strftime("%Y/%m/%d")
-                time_str = dt.strftime("%H:%M")
-
-                location = ""
-                if "地點" in props and props["地點"].get("rich_text"):
-                    location = props["地點"]["rich_text"][0]["text"]["content"]
-
-                meeting_str = f"{i}. {title} {time_str}\n－地點：{location}"
-                related_meetings.append(meeting_str)
-
             # 組合回覆
-            if related_meetings:
-                header = f"{date_str} 會議通知"
-                message_text = header + "\n" + "\n".join(related_meetings)
-                await message.channel.send(message_text)
-            else:
-                await message.channel.send("🙅 今天沒有你參加的會議喔！")
+            if not employee_id:
+                await message.channel.send("沒有你相關的會議唷")
+            return
+
+        reply_text = get_today_meetings_for_user(employee_id)
 
         except Exception as e:
             await message.channel.send(f"❗ 發生錯誤：{e}")
