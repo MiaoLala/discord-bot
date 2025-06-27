@@ -160,16 +160,16 @@ async def meeting_command(interaction: discord.Interaction):
             }
         )
         if not user_response["results"]:
-            await interaction.followup.send("🙈 找不到你的員編喔，請先完成使用者綁定")
+            await interaction.followup.send("🙈 找不到你的員編喔，請先完成使用者綁定", ephemeral=True)
             return
 
         user_entry = user_response["results"][0]
         employee_id = user_entry["properties"]["Name"]["title"][0]["text"]["content"]
         reply_text = get_today_meetings_for_user(employee_id)
-        await interaction.followup.send(reply_text)
+        await interaction.followup.send(reply_text, ephemeral=True)
 
     except Exception as e:
-        await interaction.followup.send(f"❗ 發生錯誤：{e}")
+        await interaction.followup.send(f"❗ 發生錯誤：{e}", ephemeral=True)
 
 
 # ====== 查詢 Notion 當日會議 ======
