@@ -225,7 +225,9 @@ def get_today_meetings_for_user(staff_id):
     return "\n".join(lines).strip()
 
 async def test_job():
-    print("這是測試工作，每分鐘執行一次")
+    channel = client.get_channel(1388040404385136791)
+    if channel:
+        await interaction.followup.send(f"❗ ", ephemeral=True)
 
 # ====== Bot 啟動與排程設定 ======
 @client.event
