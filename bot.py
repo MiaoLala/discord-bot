@@ -27,10 +27,10 @@ tz = timezone(timedelta(hours=8))
 notion = NotionClient(auth=NOTION_TOKEN)
 
 # 預設頻道設定
-REPORT_CHANNEL_ID = 1387409782553710663
+REPORT_CHANNEL_ID = 1387409782553710663 # 公告
 MEETING_ALLOWED_CHANNEL_ID = 1387988298668048434
 DEBUG_ALLOWED_CHANNEL_ID = 1388000532572012685
-
+TARGET_CHANNEL_ID = 1388083307476156466 # 提醒
 
 # ====== HTTP 假伺服器（Render Ping 用）======
 class DummyHandler(BaseHTTPRequestHandler):
@@ -70,12 +70,10 @@ def is_last_friday(date):
 async def send_monthly_reminder():
     now = datetime.now(tz)
     if is_last_working_day(now.date()):
-        channel = client.get_channel(REPORT_CHANNEL_ID)
+        channel = client.get_channel(TARGET_CHANNEL_ID)
         if channel:
             await channel.send("📌 記得寫5號報告唷~")
 
-# ======= 打卡提醒訊息 =======
-TARGET_CHANNEL_ID = 1388083307476156466
 
 # 打卡提醒訊息
 async def send_daily_reminder():
