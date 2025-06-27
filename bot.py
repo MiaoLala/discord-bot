@@ -138,8 +138,12 @@ async def on_message(message):
         await message.channel.send("pong！")
 
     elif content == "/會議":
-        await message.channel.send("📡 正在查詢今天的會議...")
-
+        channel = message.channel
+        if channel != "1387988298668048434":
+            return
+        
+        await message.channel.send("📡 正在查詢今天的會議...")      
+        
         try:
             user_entry = user_response["results"][0]
             employee_id = user_entry["properties"]["Name"]["title"][0]["text"]["content"]
