@@ -64,6 +64,7 @@ async def send_monthly_reminder():
 
 
 # ====== Debug Modal 定義 ======
+# Modal 視窗
 class DebugRequestModal(discord.ui.Modal, title="🛠️ Debug 查詢申請"):
     content = discord.ui.TextInput(
         label="請填寫以下內容",
@@ -81,10 +82,17 @@ class DebugRequestModal(discord.ui.Modal, title="🛠️ Debug 查詢申請"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
+        # 本人看到確認訊息（ephemeral）
         await interaction.response.send_message(
-            f"✅ 已收到你的申請內容：\n\n```{self.content.value}```",
-            ephemeral=True
+            "✅ 已收到你的申請內容，我們會儘快處理！", ephemeral=True
         )
+
+        # 公開發送申請內容
+        channel = interaction.client.get_channel(DEBUG_ALLOWED_CHANNEL_ID)
+        if channel:
+            await channel.send(
+                f"📨 <@{interaction.user.id}> 提交了一筆 Debug 查詢申請：\n```{self.content.value}```"
+            )
 
 
 # ====== /debug申請 ======
