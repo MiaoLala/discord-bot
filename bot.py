@@ -148,7 +148,7 @@ async def meeting_command(interaction: discord.Interaction):
         await interaction.response.send_message("❗此指令只能在指定頻道中使用喔～", ephemeral=True)
         return
 
-    await interaction.response.defer(thinking=True)
+    await interaction.response.defer(thinking=True, ephemeral=True)
 
     discord_user_id = interaction.user.id
 
