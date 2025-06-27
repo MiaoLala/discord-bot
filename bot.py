@@ -68,7 +68,7 @@ async def on_ready():
 
     # ✅ 指定一次性排程：2025/06/27 14:32 台灣時間
     scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
-    trigger_time = datetime(2025, 6, 27, 14, 38, tzinfo=tz)  # 台灣時間
+    trigger_time = datetime(2025, 6, 27, 14, 45, tzinfo=tz)  # 台灣時間
     scheduler.add_job(send_monthly_reminder, DateTrigger(run_date=trigger_time))
     scheduler.start()
 
