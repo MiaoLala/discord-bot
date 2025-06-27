@@ -74,12 +74,20 @@ async def send_monthly_reminder():
         if channel:
             await channel.send("📌 記得寫5號報告唷~")
 
+# ======= 打卡提醒訊息 =======
+TARGET_CHANNEL_ID = 1388083307476156466
 
 # 打卡提醒訊息
 async def send_daily_reminder():
+    now = datetime.now(tz)
+    hour = now.hour
     channel = client.get_channel(TARGET_CHANNEL_ID)
     if channel:
-        await channel.send("⏰ 記得打卡唷！！")
+        if hour < 12:
+            await channel.send("⏰ 記得上班打卡唷！！")
+        else:
+            await channel.send("🕔 下班前記得打卡！")
+        
 
 # ====== Debug Modal 定義 ======
 # Modal 視窗
@@ -226,6 +234,7 @@ async def on_ready():
 
     scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
     scheduler.add_job(send_monthly_reminder, CronTrigger(day_of_week="fri", hour=9, minute=0))
+    scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=8, minute=25))
     scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=18, minute=0))
     scheduler.start()
 
