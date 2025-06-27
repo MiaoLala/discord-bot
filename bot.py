@@ -8,9 +8,6 @@ from dateutil import parser
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-@app.route("/")
-def home():
-    return "Discord Flask Web Server Running!"
 
 # ====== 設定區 ======
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
