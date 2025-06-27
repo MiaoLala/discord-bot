@@ -7,7 +7,8 @@ from datetime import datetime, timedelta, timezone
 from dateutil import parser
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 # ====== 設定區 ======
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
@@ -38,6 +39,22 @@ def run_dummy_server():
 
 threading.Thread(target=run_dummy_server).start()
 
+# 發送每月五號報告提醒
+REPORT_CHANNEL_ID = 1387409782553710663  # 修改為你要發送的頻道 ID
+
+def is_last_friday(date):
+    """判斷該日期是否為該月最後一個星期五"""
+    next_week = date + timedelta(weeks=1)
+    return date.weekday() == 4 and next_week.month != date.month
+
+async def send_monthly_reminder():
+    now = datetime.now(tz)
+    if is_last_friday(now.date()):
+        channel = client.get_channel(REPORT_CHANNEL_ID)
+        if channel:
+            await channel.send("📌 記得寫5號報告唷~")
+
+
 # ====== Slash Command Bot 建立 ======
 intents = discord.Intents.default()
 client = commands.Bot(command_prefix="!", intents=intents)
@@ -46,6 +63,11 @@ client = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f"✅ Bot 已上線：{client.user}")
     await client.tree.sync(guild=GUILD_ID)
+
+    scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
+    # 每週五早上 9:00 執行（函式內部再判斷是不是「最後一個週五」）
+    scheduler.add_job(send_monthly_reminder, CronTrigger(day_of_week="fri", hour=9, minute=0))
+    scheduler.start()
 
 # ====== Notion 查詢邏輯 ======
 def get_today_meetings_for_user(staff_id):
