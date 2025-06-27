@@ -224,6 +224,8 @@ def get_today_meetings_for_user(staff_id):
 
     return "\n".join(lines).strip()
 
+async def test_job():
+    print("這是測試工作，每分鐘執行一次")
 
 # ====== Bot 啟動與排程設定 ======
 @client.event
@@ -235,6 +237,7 @@ async def on_ready():
     scheduler.add_job(send_monthly_reminder, CronTrigger(day_of_week="fri", hour=9, minute=0))
     scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=8, minute=25))
     scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=18, minute=0))
+    scheduler.add_job(test_job, CronTrigger(second=0))
     scheduler.start()
 
 
