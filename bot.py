@@ -75,6 +75,12 @@ async def send_monthly_reminder():
             await channel.send("📌 記得寫5號報告唷~")
 
 
+# 打卡提醒訊息
+async def send_daily_reminder():
+    channel = client.get_channel(TARGET_CHANNEL_ID)
+    if channel:
+        await channel.send("⏰ 記得打卡唷！！")
+
 # ====== Debug Modal 定義 ======
 # Modal 視窗
 class DebugRequestModal(discord.ui.Modal, title="🛠️ Debug 查詢申請"):
@@ -220,6 +226,7 @@ async def on_ready():
 
     scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
     scheduler.add_job(send_monthly_reminder, CronTrigger(day_of_week="fri", hour=9, minute=0))
+    scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=18, minute=0))
     scheduler.start()
 
 
