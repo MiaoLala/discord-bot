@@ -227,7 +227,7 @@ def get_today_meetings_for_user(staff_id):
 async def test_job():
     channel = client.get_channel(1388040404385136791)
     if channel:
-        await channel.send(f"❗ ", ephemeral=True)
+        await channel.send(f"❗ ")
 
 # ====== Bot 啟動與排程設定 ======
 @client.event
