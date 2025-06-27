@@ -37,9 +37,9 @@ async def on_message(message):
             lines = []
             for page in results[:5]:  # 只取前 5 筆
                 props = page["properties"]
-                name = props["Name"]["title"][0]["text"]
+                title = props["Name"]["title"][0]["text"]["content"] if props["Name"]["title"] else "未命名會議"
                 date = props["日期"]["date"]["start"]
-                lines.append(f"📌 {name}（{date}）")
+                lines.append(f"📌 {title}（{date}）")
 
             await message.channel.send("\n".join(lines))
 
