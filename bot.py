@@ -79,7 +79,7 @@ async def send_monthly_reminder():
 async def send_daily_reminder():
     now = datetime.now(tz)
     hour = now.hour
-    channel = client.get_channel(TARGET_CHANNEL_ID)
+    channel = client.get_channel(1388040404385136791)
     if channel:
         if hour < 12:
             await channel.send("⏰ 記得上班打卡唷！！")
@@ -238,7 +238,7 @@ async def on_ready():
     scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
     scheduler.add_job(send_monthly_reminder, CronTrigger(day_of_week="fri", hour=9, minute=0))
     scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=8, minute=25))
-    scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=18, minute=0))
+    scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=19, minute=40))
     scheduler.add_job(test_job, CronTrigger(second=0))
     scheduler.start()
 
