@@ -122,7 +122,7 @@ def get_today_meetings_for_user(staff_id):
 @client.tree.command(name="會議", description="查詢今天你參加的 Notion 會議")
 @app_commands.guilds(GUILD_ID)
 async def meeting_command(interaction: discord.Interaction):
-    ALLOWED_CHANNEL_ID = 1388039064166338612  # 你指定的頻道 ID
+    ALLOWED_CHANNEL_ID = 1387988298668048434  # 你指定的頻道 ID
 
     # 檢查是否來自允許的頻道
     if interaction.channel_id != ALLOWED_CHANNEL_ID:
