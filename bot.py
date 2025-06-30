@@ -54,24 +54,66 @@ def run_dummy_server():
 threading.Thread(target=run_dummy_server).start()
 
 
+# ====== 找國定假日 ======
+def is_today_public_holiday():
+    today_str = datetime.now(tz).date().isoformat()
+    filter_conditions = {
+        "and": [
+            {"property": "日期", "date": {"on_or_after": today_str, "on_or_before": today_str}},
+            {"property": "類別", "select": {"equals": "國定假日"}}
+        ]
+    }
+
+    results = notion.databases.query(
+        database_id=MEETING_DB_ID,
+        filter=filter_conditions
+    ).get("results", [])
+
+    return len(results) > 0
+
 # ====== 每月提醒邏輯 ======
-def is_last_working_day(date: datetime.date) -> bool:
-    # 找出該月最後一天
-    last_day = calendar.monthrange(date.year, date.month)[1]
-    last_date = datetime(date.year, date.month, last_day).date()
+def get_last_valid_workday(notion_holidays: set, year: int, month: int) -> datetime.date:
+    """
+    傳回當月最後一個非假日工作日。
+    :param notion_holidays: set of str (格式為 "YYYY-MM-DD")
+    :return: datetime.date
+    """
+    last_day = calendar.monthrange(year, month)[1]
+    date = datetime(year, month, last_day).date()
 
-    # 從最後一天往前找，直到不是週六日
-    while last_date.weekday() >= 5:  # 5: Saturday, 6: Sunday
-        last_date -= timedelta(days=1)
+    while True:
+        is_weekend = date.weekday() >= 5
+        is_holiday = date.isoformat() in notion_holidays
 
-    return date == last_date
-
-def is_last_friday(date):
-    return date.weekday() == 4 and (date + timedelta(weeks=1)).month != date.month
-    
+        if not is_weekend and not is_holiday:
+            return date
+        date -= timedelta(days=1)
+        
 async def send_monthly_reminder():
     now = datetime.now(tz)
-    if is_last_working_day(now.date()):
+
+    # === 查詢 Notion 國定假日 ===
+    holiday_pages = notion.databases.query(
+        database_id=MEETING_DB_ID,
+        filter={
+            "property": "類別",
+            "select": {"equals": "國定假日"}
+        }
+    ).get("results", [])
+
+    # 將假日日期組成 set（格式：YYYY-MM-DD）
+    holidays = set()
+    for page in holiday_pages:
+        date_prop = page["properties"].get("日期", {}).get("date", {})
+        if date_prop and date_prop.get("start"):
+            date_str = parser.isoparse(date_prop["start"]).date().isoformat()
+            holidays.add(date_str)
+
+    # 取得本月最後一個有效工作日
+    last_workday = get_last_valid_workday(holidays, now.year, now.month)
+    
+    # 如果今天是最後一個工作天，就發送
+    if now.date() == last_workday:
         channel = client.get_channel(TARGET_CHANNEL_ID)
         if channel:
             await channel.send("📌 記得寫5號報告唷~")
@@ -79,6 +121,10 @@ async def send_monthly_reminder():
 
 # 打卡提醒訊息More actions
 async def send_daily_reminder():
+    if is_today_public_holiday():
+        print("今天是國定假日，不發送提醒訊息。")
+        return
+        
     now = datetime.now(tz)
     hour = now.hour
     channel = client.get_channel(TARGET_CHANNEL_ID)
@@ -309,7 +355,7 @@ async def on_ready():
     await client.tree.sync(guild=GUILD_ID)
 
     scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
-    scheduler.add_job(send_monthly_reminder, CronTrigger(day_of_week="fri", hour=9, minute=0, timezone="Asia/Taipei"), misfire_grace_time=300)
+    scheduler.add_job(send_monthly_reminder, CronTrigger(hour=10, minute=0, timezone="Asia/Taipei"), misfire_grace_time=300)
     scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=8, minute=25, timezone="Asia/Taipei"), misfire_grace_time=300)
     scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=18, minute=00, timezone="Asia/Taipei"), misfire_grace_time=300)
     scheduler.start()
