@@ -165,7 +165,16 @@ async def meeting_command(interaction: discord.Interaction):
         await interaction.response.send_message("❗此指令只能在指定頻道中使用喔～", ephemeral=True)
         return
 
-    await interaction.response.defer(thinking=True, ephemeral=True)
+    try:
+        # 先立即 defer，確保 Discord 知道你會晚點回覆
+        await interaction.response.defer(thinking=True, ephemeral=True)
+    except discord.errors.NotFound:
+        # interaction 已失效，無法再 defer，直接返回或忽略
+        return
+    except Exception as e:
+        # 其他錯誤紀錄
+        print(f"defer 發生錯誤：{e}")
+        return
 
     discord_user_id = interaction.user.id
 
