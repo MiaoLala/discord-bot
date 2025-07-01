@@ -60,7 +60,7 @@ def is_today_public_holiday():
     today = datetime.now(tz).date().isoformat()
     filter_conditions = {
         "and": [
-            {"property": "日期", "date": {"equals": today.date().isoformat()}},
+            {"property": "日期", "date": {"equals": today}},
             {"property": "類別", "select": {"equals": "國定假日"}}
         ]
     }
