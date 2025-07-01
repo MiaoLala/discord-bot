@@ -356,6 +356,7 @@ async def on_ready():
 
     scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
     scheduler.add_job(send_monthly_reminder, CronTrigger(hour=10, minute=0, timezone="Asia/Taipei"), misfire_grace_time=300)
+    scheduler.add_job(send_daily_reminder, CronTrigger(minute=10))
     scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=8, minute=25, timezone="Asia/Taipei"), misfire_grace_time=300)
     scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=18, minute=0, timezone="Asia/Taipei"), misfire_grace_time=300)
     scheduler.start()
