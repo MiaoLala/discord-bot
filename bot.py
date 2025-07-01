@@ -143,7 +143,21 @@ async def send_daily_reminder():
             await channel.send("🕔 下班前記得打卡！")
 
 
-# ====== /會議 查詢 ======
+# ====== 工具函式：將長訊息分段 ======
+def split_text(text, max_length=1900):
+    lines = text.split('\n')
+    result = []
+    buffer = ""
+    for line in lines:
+        if len(buffer) + len(line) + 1 > max_length:
+            result.append(buffer)
+            buffer = ""
+        buffer += line + "\n"
+    if buffer:
+        result.append(buffer)
+    return result
+
+# ====== /會議 查詢指令 ======
 @client.tree.command(name="會議", description="查詢今天你參加的 Notion 會議")
 @app_commands.guilds(GUILD_ID)
 async def meeting_command(interaction: discord.Interaction):
@@ -156,6 +170,7 @@ async def meeting_command(interaction: discord.Interaction):
     discord_user_id = interaction.user.id
 
     try:
+        # 查詢使用者員編
         user_response = await query_notion_database(
             USERID_DB_ID,
             {
@@ -203,18 +218,22 @@ async def meeting_command(interaction: discord.Interaction):
                 "location": location
             })
 
+        # 組訊息內容
+        today_display = datetime.now(tz).strftime('%Y/%m/%d')
         if not meetings_for_user:
-            await interaction.followup.send(f"{datetime.now(tz).strftime('%Y/%m/%d')} 今天沒有會議喔！", ephemeral=True)
+            await interaction.followup.send(f"{today_display} 今天沒有會議喔！", ephemeral=True)
             return
 
-        lines = [f"{datetime.now(tz).strftime('%Y/%m/%d')} 會議提醒"]
+        lines = [f"{today_display} 會議提醒"]
         for idx, m in enumerate(meetings_for_user, 1):
             lines.append(f"{idx}. {m['title']}")
             lines.append(f"－ 時間：{m['datetime']}")
             lines.append(f"－ 地點：{m['location']}")
             lines.append("")
 
-        await interaction.followup.send("\n".join(lines).strip(), ephemeral=True)
+        # 分段送出
+        for chunk in split_text("\n".join(lines).strip()):
+            await interaction.followup.send(chunk, ephemeral=True)
 
     except Exception as e:
         await interaction.followup.send(f"❗ 發生錯誤：{e}", ephemeral=True)
