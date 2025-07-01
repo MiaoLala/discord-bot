@@ -57,20 +57,25 @@ threading.Thread(target=run_dummy_server).start()
 
 # ====== 找國定假日 ======
 def is_today_public_holiday():
-    today_str = datetime.now(tz).date().isoformat()
+    today = datetime.now(tz).date().isoformat()
     filter_conditions = {
         "and": [
-            {"property": "日期", "date": {"on_or_after": today_str, "on_or_before": today_str}},
+            {"property": "日期", "date": {"equals": today.date().isoformat()}},
             {"property": "類別", "select": {"equals": "國定假日"}}
         ]
     }
 
-    results = notion.databases.query(
-        database_id=MEETING_DB_ID,
-        filter=filter_conditions
-    ).get("results", [])
+    try:
+        results = notion.databases.query(
+            database_id=MEETING_DB_ID,
+            filter=filter_conditions
+        ).get("results", [])
 
-    return len(results) > 0
+        print(f"✅ 是否國定假日：{len(results) > 0}")
+        return len(results) > 0
+    except Exception as e:
+        print(f"❗ 查詢國定假日時發生錯誤：{e}")
+        return False
 
 # ====== 每月提醒邏輯 ======
 def get_last_valid_workday(notion_holidays: set, year: int, month: int) -> datetime.date:
