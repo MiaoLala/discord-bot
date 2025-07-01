@@ -311,7 +311,7 @@ def get_today_meetings_for_user(staff_id):
 
     filter_conditions = {
         "and": [
-            {"property": "日期", "date": {"on_or_after": today_str, "on_or_before": today_str}},
+            {"property": "日期", "date": {"equals": today_str}},
             {"property": "類別", "select": {"equals": "會議"}}
         ]
     }
