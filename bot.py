@@ -121,9 +121,9 @@ async def send_monthly_reminder():
 
 # 打卡提醒訊息More actions
 async def send_daily_reminder():
-    # if is_today_public_holiday():
-    #     print("今天是國定假日，不發送提醒訊息。")
-    #     return
+    if is_today_public_holiday():
+        print("今天是國定假日，不發送提醒訊息。")
+        return
         
     now = datetime.now(tz)
     hour = now.hour
@@ -356,7 +356,7 @@ async def on_ready():
 
     scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
     scheduler.add_job(send_monthly_reminder, CronTrigger(hour=10, minute=0, timezone="Asia/Taipei"), misfire_grace_time=300)
-    scheduler.add_job(send_daily_reminder, CronTrigger(minute=10))
+    scheduler.add_job(send_daily_reminder, CronTrigger(seconds=10))
     scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=8, minute=25, timezone="Asia/Taipei"), misfire_grace_time=300)
     scheduler.add_job(send_daily_reminder, CronTrigger(day_of_week="mon-fri", hour=18, minute=0, timezone="Asia/Taipei"), misfire_grace_time=300)
     scheduler.start()
