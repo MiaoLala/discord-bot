@@ -188,6 +188,7 @@ async def meeting_command(interaction: discord.Interaction):
                     "number": {"equals": discord_user_id}
                 }
             )
+            await interaction.followup.send(user_response["results"][0], ephemeral=True)
         except Exception as e:
             print(f"查詢使用者員編失敗: {e}", exc_info=True)
             await interaction.followup.send("❗查詢使用者員編時發生錯誤，請稍後再試。", ephemeral=True)
