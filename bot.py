@@ -171,13 +171,19 @@ async def meeting_command(interaction: discord.Interaction):
 
     try:
         # 查詢使用者員編
-        user_response = await query_notion_database(
-            USERID_DB_ID,
-            {
-                "property": "DC ID",
-                "number": {"equals": discord_user_id}
-            }
-        )
+        try:
+            user_response = await query_notion_database(
+                USERID_DB_ID,
+                {
+                    "property": "DC ID",
+                    "number": {"equals": discord_user_id}
+                }
+            )
+        except Exception as e:
+            print(f"查詢使用者員編失敗: {e}", exc_info=True)
+            await interaction.followup.send("❗查詢使用者員編時發生錯誤，請稍後再試。", ephemeral=True)
+            return
+
         if not user_response["results"]:
             await interaction.followup.send("🙈 找不到你的員編喔，請先完成使用者綁定", ephemeral=True)
             return
@@ -193,7 +199,14 @@ async def meeting_command(interaction: discord.Interaction):
                 {"property": "類別", "select": {"equals": "會議"}}
             ]
         }
-        meeting_pages = await query_notion_database(MEETING_DB_ID, meeting_filter)
+
+        try:
+            meeting_pages = await query_notion_database(MEETING_DB_ID, meeting_filter)
+        except Exception as e:
+            print(f"查詢今日會議失敗: {e}", exc_info=True)
+            await interaction.followup.send("❗查詢今日會議時發生錯誤，請稍後再試。", ephemeral=True)
+            return
+
         meetings_for_user = []
 
         for page in meeting_pages.get("results", []):
