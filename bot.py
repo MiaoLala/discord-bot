@@ -34,6 +34,7 @@ DEBUG_ALLOWED_CHANNEL_ID = 1388000532572012685
 TARGET_CHANNEL_ID = 1388083307476156466
 SENDMAIL_CHANNEL_ID = 1388000512875696128
 TEST_CHANNEL_ID = 1388040404385136791
+APP_TRANSFER_CHANNEL_ID = 1390490834444746862
 
 # ====== 執行緒池，用來包同步 Notion 查詢 ======
 executor = ThreadPoolExecutor(max_workers=5)
@@ -376,6 +377,45 @@ async def debug_command(interaction: discord.Interaction):
         ephemeral=True
     )
 
+# ====== 轉應用程式 ======
+class AppTransferRequestModal(discord.ui.Modal, title="📦 轉應用程式申請"):
+    content = discord.ui.TextInput(
+        label="請確認或補充以下內容",
+        style=discord.TextStyle.paragraph,
+        default=(
+            "請協助轉應用程式\n\n"
+            "路徑：\\\\NH-WebAP0\\_Source\\Source\\\n\n"
+            "謝謝"
+        ),
+        required=True,
+        max_length=1000
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message("✅ 已收到你的申請內容，我們會儘快處理！", ephemeral=True)
+        channel = interaction.client.get_channel()
+        if channel:
+            await channel.send(
+                f"📨 <@{interaction.user.id}> 提交了一筆轉應用程式申請：\n```{self.content.value}```"
+            )
+
+class AppTransferButtonView(discord.ui.View):
+    @discord.ui.button(label="轉應用程式申請", style=discord.ButtonStyle.primary)
+    async def open_app_transfer_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(AppTransferRequestModal())
+
+@client.tree.command(name="轉應用程式", description="開啟轉應用程式申請按鈕")
+@app_commands.guilds(GUILD_ID)
+async def app_transfer_command(interaction: discord.Interaction):
+    if interaction.channel_id != APP_TRANSFER_CHANNEL_ID:
+        await interaction.response.send_message("❗此指令只能在指定頻道中使用喔～", ephemeral=True)
+        return
+
+    await interaction.response.send_message(
+        "請點下面按鈕開啟轉應用程式申請表單",
+        view=AppTransferButtonView(),
+        ephemeral=True
+    )
 
 # ====== Bot 啟動與排程設定 ======
 @client.event
