@@ -393,7 +393,7 @@ class AppTransferRequestModal(discord.ui.Modal, title="📦 轉應用程式申�
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message("✅ 已收到你的申請內容，我們會儘快處理！", ephemeral=True)
-        channel = interaction.client.get_channel()
+        channel = interaction.client.get_channel(APP_TRANSFER_CHANNEL_ID)
         if channel:
             await channel.send(
                 f"📨 <@{interaction.user.id}> 提交了一筆轉應用程式申請：\n```{self.content.value}```"
